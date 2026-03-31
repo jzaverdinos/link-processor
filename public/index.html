@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Link Processor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f1117;
+      color: #e1e4e8;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #fff;
+    }
+
+    .subtitle {
+      color: #8b949e;
+      margin-bottom: 32px;
+      font-size: 14px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 220px;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      color: #e1e4e8;
+      padding: 16px;
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 13px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    textarea:focus { border-color: #58a6ff; }
+
+    textarea::placeholder { color: #484f58; }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .btn {
+      padding: 10px 24px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-primary {
+      background: #238636;
+      color: #fff;
+    }
+    .btn-primary:hover { background: #2ea043; }
+    .btn-primary:disabled { background: #1a2e22; color: #3d6b3d; cursor: not-allowed; }
+
+    .btn-secondary {
+      background: #21262d;
+      color: #c9d1d9;
+      border: 1px solid #30363d;
+    }
+    .btn-secondary:hover { background: #30363d; }
+    .btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .link-count {
+      color: #8b949e;
+      font-size: 13px;
+    }
+
+    .progress-bar {
+      display: none;
+      margin-top: 24px;
+      background: #161b22;
+      border-radius: 8px;
+      overflow: hidden;
+      height: 6px;
+    }
+
+    .progress-bar.active { display: block; }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #238636, #2ea043);
+      width: 0%;
+      transition: width 0.3s;
+      border-radius: 8px;
+    }
+
+    .progress-text {
+      display: none;
+      margin-top: 8px;
+      font-size: 13px;
+      color: #8b949e;
+    }
+    .progress-text.active { display: block; }
+
+    .results-section {
+      display: none;
+      margin-top: 32px;
+    }
+    .results-section.active { display: block; }
+
+    .results-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .results-header h2 {
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .results-actions { display: flex; gap: 8px; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #161b22;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    th {
+      text-align: left;
+      padding: 12px 16px;
+      background: #1c2128;
+      color: #8b949e;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    td {
+      padding: 10px 16px;
+      border-top: 1px solid #21262d;
+      font-size: 13px;
+      font-family: "SF Mono", "Fira Code", monospace;
+    }
+
+    tr:hover td { background: #1c2128; }
+
+    .link-cell {
+      max-width: 400px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .link-cell a {
+      color: #58a6ff;
+      text-decoration: none;
+    }
+    .link-cell a:hover { text-decoration: underline; }
+
+    .copy-btn {
+      background: none;
+      border: 1px solid #30363d;
+      color: #8b949e;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .copy-btn:hover { border-color: #58a6ff; color: #58a6ff; }
+    .copy-btn.copied { border-color: #238636; color: #238636; }
+
+    .status-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    .status-success { background: #1a2e22; color: #3fb950; }
+    .status-error { background: #3d1a1a; color: #f85149; }
+
+    .error-row td { opacity: 0.7; }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #1c2128;
+      border: 1px solid #30363d;
+      color: #e1e4e8;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.3s;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Link Processor</h1>
+    <p class="subtitle">Paste media links below (one per line). Each file will be downloaded, renamed, and uploaded to your CDN.</p>
+
+    <textarea id="linksInput" placeholder="Paste your links here, one per line...&#10;&#10;https://example.com/image1.jpg&#10;https://example.com/video1.mp4"></textarea>
+
+    <div class="controls">
+      <button class="btn btn-primary" id="processBtn" onclick="processLinks()">Process Links</button>
+      <button class="btn btn-secondary" id="clearBtn" onclick="clearAll()">Clear</button>
+      <span class="link-count" id="linkCount">0 links detected</span>
+    </div>
+
+    <div class="progress-bar" id="progressBar">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <div class="progress-text" id="progressText"></div>
+
+    <div class="results-section" id="resultsSection">
+      <div class="results-header">
+        <h2>Results</h2>
+        <div class="results-actions">
+          <button class="btn btn-secondary" onclick="copyAllNewLinks()">Copy All New Links</button>
+          <button class="btn btn-secondary" onclick="exportCSV()">Export CSV</button>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Status</th>
+            <th>Original Link</th>
+            <th>New CDN Link</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="resultsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const linksInput = document.getElementById("linksInput");
+    const linkCount = document.getElementById("linkCount");
+    const processBtn = document.getElementById("processBtn");
+    const progressBar = document.getElementById("progressBar");
+    const progressFill = document.getElementById("progressFill");
+    const progressText = document.getElementById("progressText");
+    const resultsSection = document.getElementById("resultsSection");
+    const resultsBody = document.getElementById("resultsBody");
+
+    let allResults = [];
+
+    linksInput.addEventListener("input", () => {
+      const lines = linksInput.value.split("\n").filter((l) => l.trim().length > 0);
+      linkCount.textContent = `${lines.length} link${lines.length !== 1 ? "s" : ""} detected`;
+    });
+
+    function showToast(msg) {
+      const toast = document.getElementById("toast");
+      toast.textContent = msg;
+      toast.classList.add("show");
+      setTimeout(() => toast.classList.remove("show"), 2500);
+    }
+
+    async function processLinks() {
+      const lines = linksInput.value.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
+      if (lines.length === 0) return;
+
+      processBtn.disabled = true;
+      progressBar.classList.add("active");
+      progressText.classList.add("active");
+      resultsSection.classList.add("active");
+      resultsBody.innerHTML = "";
+      allResults = [];
+      progressFill.style.width = "0%";
+      progressText.textContent = `Processing 0 / ${lines.length}...`;
+
+      let processed = 0;
+
+      try {
+        const response = await fetch("/api/process", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ links: lines }),
+        });
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const events = buffer.split("\n\n");
+          buffer = events.pop();
+
+          for (const event of events) {
+            if (!event.startsWith("data: ")) continue;
+            const data = JSON.parse(event.slice(6));
+
+            if (data.type === "progress") {
+              processed++;
+              const pct = Math.round((processed / lines.length) * 100);
+              progressFill.style.width = `${pct}%`;
+              progressText.textContent = `Processing ${processed} / ${lines.length}...`;
+              allResults.push(data.result);
+              addResultRow(processed, data.result, true);
+            } else if (data.type === "error") {
+              processed++;
+              const pct = Math.round((processed / lines.length) * 100);
+              progressFill.style.width = `${pct}%`;
+              progressText.textContent = `Processing ${processed} / ${lines.length}...`;
+              allResults.push(data.result);
+              addResultRow(processed, data.result, false);
+            } else if (data.type === "done") {
+              progressText.textContent = `Done! ${data.results.length} succeeded, ${data.errors.length} failed.`;
+            }
+          }
+        }
+      } catch (err) {
+        progressText.textContent = `Error: ${err.message}`;
+      }
+
+      processBtn.disabled = false;
+    }
+
+    function addResultRow(index, result, success) {
+      const tr = document.createElement("tr");
+      if (!success) tr.className = "error-row";
+      tr.innerHTML = `
+        <td>${index}</td>
+        <td><span class="status-badge ${success ? "status-success" : "status-error"}">${success ? "OK" : "Error"}</span></td>
+        <td class="link-cell"><a href="${result.originalUrl}" target="_blank">${result.originalUrl}</a></td>
+        <td class="link-cell">${success ? `<a href="${result.newUrl}" target="_blank">${result.newUrl}</a>` : result.error}</td>
+        <td>${success ? `<button class="copy-btn" onclick="copyLink(this, '${result.newUrl}')">Copy</button>` : ""}</td>
+      `;
+      resultsBody.appendChild(tr);
+    }
+
+    function copyLink(btn, url) {
+      navigator.clipboard.writeText(url);
+      btn.textContent = "Copied!";
+      btn.classList.add("copied");
+      setTimeout(() => {
+        btn.textContent = "Copy";
+        btn.classList.remove("copied");
+      }, 1500);
+    }
+
+    function copyAllNewLinks() {
+      const newLinks = allResults.filter((r) => r.newUrl).map((r) => r.newUrl).join("\n");
+      navigator.clipboard.writeText(newLinks);
+      showToast(`Copied ${allResults.filter((r) => r.newUrl).length} links to clipboard`);
+    }
+
+    function exportCSV() {
+      let csv = "Original Link,New CDN Link,Unique ID\n";
+      for (const r of allResults) {
+        if (r.newUrl) {
+          csv += `"${r.originalUrl}","${r.newUrl}","${r.uniqueId}"\n`;
+        } else {
+          csv += `"${r.originalUrl}","ERROR: ${r.error || "unknown"}",""\n`;
+        }
+      }
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `link-processor-${Date.now()}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast("CSV exported");
+    }
+
+    function clearAll() {
+      linksInput.value = "";
+      linkCount.textContent = "0 links detected";
+      resultsBody.innerHTML = "";
+      resultsSection.classList.remove("active");
+      progressBar.classList.remove("active");
+      progressText.classList.remove("active");
+      allResults = [];
+    }
+  </script>
+</body>
+</html>
